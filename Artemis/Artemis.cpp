@@ -9,6 +9,8 @@
 #pragma comment(lib, "../libs/ChakraCore64.lib")
 #endif
 
+#pragma comment(lib, "../x64/Release/Modules/Coeus.lib")
+
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------Raw Artemis-----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -18,12 +20,12 @@ JsValueRef CALLBACK Artemis_OpenProcess(JsValueRef callee, bool isConstructCall,
 		JsValueType retType;
 		JsGetValueType(arguments[1], &retType);
 
-		Process* process = new Process();
+		Process_OBJREADY* process = new Process_OBJREADY();
 		if (retType == JsNumber) {
 			unsigned pid;
 			JsNumberToInt(arguments[1], (signed*)&pid);
 			if (process->Open(pid)) {
-				return process->BuildJsObject();
+				return process->GenerateObject();
 			} else {
 				delete process;
 				goto Artemis_OpenProcess_failiure;
@@ -34,7 +36,7 @@ JsValueRef CALLBACK Artemis_OpenProcess(JsValueRef callee, bool isConstructCall,
 			if (ProcNameSize > _MAX_FNAME) { delete process; goto Artemis_OpenProcess_failiure; }
 			char* nameBuffer = (char*)calloc(ProcNameSize+1, 1);
 			JsCopyString(arguments[1], nameBuffer, ProcNameSize + 1, &ProcNameSize);
-			if (process->Open(nameBuffer)) { return process->BuildJsObject();}
+			if (process->Open(nameBuffer)) { return process->GenerateObject();}
 			else { delete process; goto Artemis_OpenProcess_failiure; }
 		} else {
 			goto Artemis_OpenProcess_failiure;

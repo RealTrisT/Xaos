@@ -21,8 +21,8 @@ struct EXPORTCLASS ObjectProperty :Property {
 	void* data;						//if getter is set, this will be set to it's return
 	Property** properties;
 	void* (*getter)(void* parentData, void* oldData);	//param data here will be set to the parent's external data, but the return will be what this object's return data is set to. If set to zero, the object will return undefined
-private:
 	JsValueRef me;
+private:
 	static JsValueRef DefaultGetter(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackstate);
 };
 
@@ -81,3 +81,16 @@ private:
 	};
 };
 
+
+//this class is meant to be inherited by objects of which multiple instances can be spawned by say a function
+struct EXPORTCLASS GeneratableObject {
+	//this constructor takes the derived class's object properties pointer, and a finalizer
+	GeneratableObject(Property** objprops, void* derivedClassPtr, void(*finalizer)(void*) = 0) : ObjectProperties(objprops), DerivedClassPtr(derivedClassPtr), Finalizer(finalizer) {}
+	Property** ObjectProperties;
+	void(*Finalizer)(void*);
+	JsValueRef jsMe;
+	//this generates the object and returns a ref to it
+	JsValueRef GenerateObject(bool* worked = 0);
+private:
+	void* DerivedClassPtr;
+};

@@ -47,7 +47,6 @@ bool Process::Open(char * ProcName) {
 	while (Process32Next(hProcessSnap, &pe32));																	//go through the list
 
 	CloseHandle(hProcessSnap);
-
 	return (ProcID) ? Open(ProcID) : false;
 }
 
@@ -97,9 +96,9 @@ inline bool Process::WriteMem(BYTE * ForeignAddress, T Buffer) {
 }
 
 //------------------------------------------------------------------------------------------------------------------------GETMODULE
-Process::Module Process::GetModule(char * modName) {
+Module Process::GetModule(char * modName) {
 	//printf("Getting Module %s\n", modName);
-	Module returnboi = { 0 };
+	Module returnboi = {};
 	HANDLE ModuleSnap = INVALID_HANDLE_VALUE;
 	MODULEENTRY32 me32;
 	me32.dwSize = sizeof(MODULEENTRY32);
@@ -128,38 +127,29 @@ Process::Module Process::GetModule(char * modName) {
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-#define getme() Process* me = (Process*)Js_GetExternPointer(arguments[0])
+#define getme() Process_OBJREADY* me = (Process_OBJREADY*)Js_GetExternPointer(arguments[0])
 
 void __stdcall KillProcessObject(Process* me) {
 	me->Close();
 	delete me;
 }
 
-JsValueRef Process::BuildJsObject(){
-	JsCreateExternalObject(this, (JsFinalizeCallback)KillProcessObject, &this->jsProcessObject);
 
-	Js_AppendFunction(this->jsProcessObject, "toString",    Process::jsToString);
-	Js_AppendFunction(this->jsProcessObject, "Close",       Process::jsClose);
-	Js_AppendFunction(this->jsProcessObject, "GetModule",   Process::jsGetModule);
-	//Js_AppendFunction(this->jsProcessObject, "ListModules", Process::jsListModules);
-	return this->jsProcessObject;
-}
-
-JsValueRef Process::jsClose(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+JsValueRef Process_OBJREADY::jsClose(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
 	getme();
 	me->Close();
-	return me->jsProcessObject;
+	return me->jsMe;
 }
 
-JsValueRef Process::jsGetModule(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+JsValueRef Process_OBJREADY::jsGetModule(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
 	getme();
 	if (Js_GetType(arguments[1]) != JsString) { puts("> Provide a string with the name of the module."); return Js_GetNull(); }
-	Module* elmod = new Module(me->GetModule((char*)Js_GetString(arguments[1]).c_str()));
+	Module_OBJREADY* elmod = new Module_OBJREADY(me->GetModule((char*)Js_GetString(arguments[1]).c_str()));
 	if (!elmod->daddy) { delete elmod; puts("> Module not found.");  return Js_GetNull(); }
-	return elmod->BuildJsObject();
+	return elmod->GenerateObject();
 }
 
-JsValueRef Process::jsToString(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+JsValueRef Process_OBJREADY::jsToString(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
 	getme();
 	std::stringstream yeah;
 	yeah << "{ path : \"" << me->procP << "\", handle : [0x" << std::uppercase << std::hex << me->procH << "], id : [0x" << me->procID << "|" << std::dec << me->procID << "] }";
@@ -194,7 +184,7 @@ JsValueRef Process::jsToString(JsValueRef callee, bool isConstructCall, JsValueR
 
 
 
-void Process::Module::UpdatePEH(){
+void Module::UpdatePEH(){
 	unsigned char* PEH = this->base;
 	unsigned PEH_Offset = 0;
 	this->daddy->ReadMem(PEH + 0x3C, PEH_Offset);
@@ -213,95 +203,27 @@ void Process::Module::UpdatePEH(){
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-void KillModuleObject(Process::Module* me) {
+void KillModuleObject(Module* me) {
 	delete me;
 }
 
-JsValueRef Process::Module::BuildJsObject() {
-	JsValueRef ElModule = 0;
-	JsCreateExternalObject(this, (JsFinalizeCallback)KillModuleObject, &ElModule);
 
-	Js_AppendFunction(ElModule, "UpdatePEH", Process::Module::jsUpdatePEH);
-	Js_AppendFunction(ElModule, "toString", Process::Module::jsToString);
-	
-	jsPEH_R = Js_AppendObject(ElModule, "PEH", this, Process::Module::jsGetPEH);
-		Js_AppendObject(jsPEH_R, "Signature", &PEH.Signature, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-		jsFileHeader_r = Js_AppendObject(jsPEH_R, "FileHeader", this, Process::Module::jsGetFileHeader);
-			Js_AppendObject(jsFileHeader_r, "Machine", &PEH.FileHeader.Machine, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsFileHeader_r, "NumberOfSections", &PEH.FileHeader.NumberOfSections, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsFileHeader_r, "TimeDateStamp", &PEH.FileHeader.TimeDateStamp, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsFileHeader_r, "PointerToSymbolTable", &PEH.FileHeader.PointerToSymbolTable, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsFileHeader_r, "NumberOfSymbols", &PEH.FileHeader.NumberOfSymbols, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsFileHeader_r, "SizeOfOptionalHeader", &PEH.FileHeader.SizeOfOptionalHeader, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsFileHeader_r, "Characteristics", &PEH.FileHeader.Characteristics, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-		jsOptionalHeader_r = Js_AppendObject(jsPEH_R, "OptionalHeader", this, Process::Module::jsGetFileHeader);
-			Js_AppendObject(jsOptionalHeader_r, "Magic", &PEH.OptionalHeader.Magic, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MajorLinkerVersion", &PEH.OptionalHeader.MajorLinkerVersion, 0, 0, BYTE_toString_callback, BYTE_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MinorLinkerVersion", &PEH.OptionalHeader.MinorLinkerVersion, 0, 0, BYTE_toString_callback, BYTE_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfCode", &PEH.OptionalHeader.SizeOfCode, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfInitializedData", &PEH.OptionalHeader.SizeOfInitializedData, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfUninitializedData", &PEH.OptionalHeader.SizeOfUninitializedData, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "AddressOfEntryPoint", &PEH.OptionalHeader.AddressOfEntryPoint, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "BaseOfCode", &PEH.OptionalHeader.BaseOfCode, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			//Js_AppendObject(jsOptionalHeader_r, "BaseOfData", &PEH.OptionalHeader.BaseOfData, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "ImageBase", &PEH.OptionalHeader.ImageBase, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SectionAlignment", &PEH.OptionalHeader.SectionAlignment, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "FileAlignment", &PEH.OptionalHeader.FileAlignment, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MajorOperatingSystemVersion", &PEH.OptionalHeader.MajorOperatingSystemVersion, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MinorOperatingSystemVersion", &PEH.OptionalHeader.MinorOperatingSystemVersion, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MajorImageVersion", &PEH.OptionalHeader.MajorImageVersion, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MinorImageVersion", &PEH.OptionalHeader.MinorImageVersion, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MajorSubsystemVersion", &PEH.OptionalHeader.MajorSubsystemVersion, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "MinorSubsystemVersion", &PEH.OptionalHeader.MinorSubsystemVersion, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "Win32VersionValue", &PEH.OptionalHeader.Win32VersionValue, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfImage", &PEH.OptionalHeader.SizeOfImage, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfHeaders", &PEH.OptionalHeader.SizeOfHeaders, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "CheckSum", &PEH.OptionalHeader.CheckSum, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "Subsystem", &PEH.OptionalHeader.Subsystem, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "DllCharacteristics", &PEH.OptionalHeader.DllCharacteristics, 0, 0, WORD_toString_callback, WORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfStackReserve", &PEH.OptionalHeader.SizeOfStackReserve, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfStackCommit", &PEH.OptionalHeader.SizeOfStackCommit, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfHeapReserve", &PEH.OptionalHeader.SizeOfHeapReserve, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "SizeOfHeapCommit", &PEH.OptionalHeader.SizeOfHeapCommit, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "LoaderFlags", &PEH.OptionalHeader.LoaderFlags, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-			Js_AppendObject(jsOptionalHeader_r, "NumberOfRvaAndSizes", &PEH.OptionalHeader.NumberOfRvaAndSizes, 0, 0, DWORD_toString_callback, DWORD_valueOf_callback);
-	return ElModule;
+#define getme() Module_OBJREADY* me = (Module_OBJREADY*)Js_GetExternPointer(arguments[0])
+#define getmeget() Module_OBJREADY* me = (Module_OBJREADY*)Js_GetExternPointer(callbackState)
+
+void * Module_OBJREADY::PEH_getter(Module_OBJREADY * daddyData, IMAGE_NT_HEADERS64 * medata) {
+	if (!medata->Signature) daddyData->UpdatePEH();
+	return &daddyData->PEH;
 }
 
-
-#define getme() Module* me = (Module*)Js_GetExternPointer(arguments[0])
-#define getmeget() Module* me = (Module*)Js_GetExternPointer(callbackState)
-
-
-JsValueRef Process::Module::jsUpdatePEH(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState) {
-	//puts("updating");
-	getme();
-	me->UpdatePEH();
-	return me->jsPEH_R;
+JsValueRef Module_OBJREADY::Module_UpdatePEH(JsValueRef c, bool cc, JsValueRef * a, unsigned short ac, void * cs) { 
+	((Module_OBJREADY*)cs)->UpdatePEH();
+	return ((Module_OBJREADY*)cs)->Module_objProps[(char)PropArrayIndexes::PEH_i].me;
 }
 
-JsValueRef Process::Module::jsToString(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+JsValueRef Module_OBJREADY::Module_toString(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
 	getme();
 	std::stringstream yeah;
-	yeah << "{ name : \"" << me->name << "\", base : [0x" << std::uppercase << std::hex << (void*)me->base << "], size : [0x" << me->size << "|" << std::dec << me->size << "] }";
+	yeah << "{ name : \"" << me->name.c_str() << "\", base : [0x" << std::uppercase << std::hex << (void*)me->base << "], size : [0x" << me->size << "|" << std::dec << me->size << "] }";
 	return Js_MakeString(yeah.str().c_str(), yeah.str().length());
-}
-
-JsValueRef Process::Module::jsGetPEH(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState) {
-	//puts("> getting PEH");
-	getmeget();
-	if (!me->PEH.Signature) {
-		me->UpdatePEH();
-	}
-	return me->jsPEH_R;
-}
-
-JsValueRef Process::Module::jsGetFileHeader(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState) {
-	getmeget();
-	return me->jsFileHeader_r;
-}
-
-JsValueRef Process::Module::jsGetOptionalHeader(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState) {
-	getmeget();
-	return me->jsOptionalHeader_r;
 }

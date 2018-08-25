@@ -103,6 +103,7 @@ struct Process {
 struct Module {
 	Module() {}
 	Module(const Module &cop) : daddy(cop.daddy), base(cop.base), size(cop.size), name(cop.name) {}
+	//---------------------------------------------------------------------MODULE MEMBERS
 
 	Process* daddy;
 	unsigned char* base;

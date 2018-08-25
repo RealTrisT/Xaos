@@ -1,4 +1,5 @@
 #include "LanguageManager.h"
+#include <string>
 
 bool FunctionProperty::Build(JsValueRef parent){
 	JsValueRef funcProcessor_r = 0;
@@ -19,6 +20,7 @@ bool FunctionProperty::Demolish(JsValueRef parent){
 
 bool ObjectProperty::Build(JsValueRef parent){
 	JsCreateExternalObject(this->data, nullptr, &this->me);		//TODO: fix finalizer
+	//printf("building %s - %s\n", this->name, this->properties[0]->name);
 	if (getter) {
 		bool result;
 		JsValueRef nameS_r;	JsCreateString(this->name, strlen(this->name), &nameS_r);
@@ -37,6 +39,7 @@ bool ObjectProperty::Build(JsValueRef parent){
 	bool hasBeenWorking = true;
 	for (int i = 0; this->properties[i] && i >= 0;) {
 		if (hasBeenWorking) {												//while building properties is successful
+			//printf("   Building %s(%p) in %s\n", this->properties[i]->name, this->properties[i], this->name);
 			if (hasBeenWorking = this->properties[i]->Build(this->me))i++;	//keep doing it and increase index so next round we do the next one
 			else {i--;														//but if it doesn't work, don't worry about it, we don't have to do any shutdown, just dec the index so next round we're demolishing the previous built
 				printf("failed to build %s in %s\n", this->properties[i+1]->name, this->name); 
@@ -81,12 +84,12 @@ bool BasicProperty::Build(JsValueRef parent) {
 	JsValueRef Descriptor; JsCreateObject(&Descriptor);
 	if (this->getter) {
 		JsValueRef getterF_r, getterS_r;
-		JsCreateFunction(natives[0], (void*)this->offsetFromObject, &getterF_r);
+		JsCreateFunction(natives[0], (void*)(unsigned long long)this->offsetFromObject, &getterF_r);
 		JsCreateString("get", 3, &getterS_r);
 		JsObjectSetProperty(Descriptor, getterS_r, getterF_r, true);
 	} if (this->setter) {
 		JsValueRef setterF_r, setterS_r;
-		JsCreateFunction(natives[1], (void*)this->offsetFromObject, &setterF_r);
+		JsCreateFunction(natives[1], (void*)(unsigned long long)this->offsetFromObject, &setterF_r);
 		JsCreateString("get", 3, &setterS_r);
 		JsObjectSetProperty(Descriptor, setterS_r, setterF_r, true);
 	}
@@ -109,7 +112,7 @@ JsValueRef BasicProperty::JS_BYTE_getter(JsValueRef callee, bool isConstructCall
 	JsValueRef number = 0;
 	BYTE* data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	DWORD data_4 = *data;
 	JsIntToNumber((signed)data_4, &number);
 	return number;
@@ -120,7 +123,7 @@ JsValueRef BasicProperty::JS_BYTE_setter(JsValueRef callee, bool isConstructCall
 	BYTE* data = 0;
 	signed argument = 0;
 	JsGetExternalData(callbackState, (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsConvertValueToNumber(arguments[1], &number);
 	JsNumberToInt(number, &argument);
 	*data = argument;
@@ -133,7 +136,7 @@ JsValueRef BasicProperty::JS_WORD_getter(JsValueRef callee, bool isConstructCall
 	JsValueRef number = 0;
 	WORD* data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	DWORD data_4 = *data;
 	JsIntToNumber((signed)data_4, &number);
 	return number;
@@ -144,7 +147,7 @@ JsValueRef BasicProperty::JS_WORD_setter(JsValueRef callee, bool isConstructCall
 	WORD* data = 0;
 	signed argument = 0;
 	JsGetExternalData(callbackState, (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsConvertValueToNumber(arguments[1], &number);
 	JsNumberToInt(number, &argument);
 	*data = argument;
@@ -157,7 +160,7 @@ JsValueRef BasicProperty::JS_DWORD_getter(JsValueRef callee, bool isConstructCal
 	JsValueRef number = 0;
 	DWORD* data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsIntToNumber((signed)*data, &number);
 	return number;
 
@@ -168,7 +171,7 @@ JsValueRef BasicProperty::JS_DWORD_setter(JsValueRef callee, bool isConstructCal
 	DWORD* data = 0;
 	signed argument = 0;
 	JsGetExternalData(callbackState, (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsConvertValueToNumber(arguments[1], &number);
 	JsNumberToInt(number, &argument);
 	*data = argument;
@@ -180,7 +183,7 @@ JsValueRef BasicProperty::JS_FLOAT_getter(JsValueRef callee, bool isConstructCal
 	JsValueRef number = 0;
 	float* data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsDoubleToNumber(*data, &number);
 	return number;
 
@@ -191,7 +194,7 @@ JsValueRef BasicProperty::JS_FLOAT_setter(JsValueRef callee, bool isConstructCal
 	float* data = 0;
 	double argument = 0;
 	JsGetExternalData(callbackState, (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsConvertValueToNumber(arguments[1], &number);
 	JsNumberToDouble(number, &argument);
 	*data = (float)argument;
@@ -203,7 +206,7 @@ JsValueRef BasicProperty::JS_DOUBLE_getter(JsValueRef callee, bool isConstructCa
 	JsValueRef number = 0;
 	double* data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsDoubleToNumber(*data, &number);
 	return number;
 
@@ -214,7 +217,7 @@ JsValueRef BasicProperty::JS_DOUBLE_setter(JsValueRef callee, bool isConstructCa
 	double* data = 0;
 	double argument = 0;
 	JsGetExternalData(callbackState, (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsConvertValueToNumber(arguments[1], &number);
 	JsNumberToDouble(number, &argument);
 	*data = argument;
@@ -226,8 +229,8 @@ JsValueRef BasicProperty::JS_STRING_getter(JsValueRef callee, bool isConstructCa
 	JsValueRef string = 0;
 	char** data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
-	JsCreateString(*data, sizeof(*data), &string);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
+	JsCreateString(*data, strlen(*data), &string);
 	return string;
 }
 
@@ -239,8 +242,8 @@ JsValueRef BasicProperty::JS_WSTRING_getter(JsValueRef callee, bool isConstructC
 	JsValueRef string = 0;
 	uint16_t** data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
-	JsCreateStringUtf16(*data, sizeof(*data), &string);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
+	JsCreateStringUtf16(*data, wcslen((wchar_t*)*data), &string);
 	return string;
 
 }
@@ -249,11 +252,37 @@ JsValueRef BasicProperty::JS_WSTRING_setter(JsValueRef callee, bool isConstructC
 	return JS_INVALID_REFERENCE;
 }
 
+JsValueRef BasicProperty::JS_STDSTRING_getter(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+	JsValueRef string = 0;
+	std::string* data = 0;
+	JsGetExternalData(arguments[0], (void**)&data);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
+	JsCreateString(data->c_str(), data->length(), &string);
+	return string;
+}
+
+JsValueRef BasicProperty::JS_STDSTRING_setter(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+	return JS_INVALID_REFERENCE; //TODO: implement this
+}
+
+JsValueRef BasicProperty::JS_STDWSTRING_getter(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+	JsValueRef string = 0;
+	std::wstring* data = 0;
+	JsGetExternalData(arguments[0], (void**)&data);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
+	JsCreateStringUtf16(*(uint16_t**)data->c_str(), data->length(), &string);
+	return string;
+}
+
+JsValueRef BasicProperty::JS_STDWSTRING_setter(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
+	return JS_INVALID_REFERENCE; //TODO: implement this
+}
+
 JsValueRef BasicProperty::JS_BOOL_getter(JsValueRef callee, bool isConstructCall, JsValueRef * arguments, unsigned short argumentCount, void * callbackState){
 	JsValueRef boolean = 0;
 	bool* data = 0;
 	JsGetExternalData(arguments[0], (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsBoolToBoolean(*data, &boolean);
 	return boolean;
 }
@@ -263,10 +292,25 @@ JsValueRef BasicProperty::JS_BOOL_setter(JsValueRef callee, bool isConstructCall
 	bool* data = 0;
 	bool argument = 0;
 	JsGetExternalData(callbackState, (void**)&data);
-	data = (decltype(data))((char*)data + (unsigned)callbackState);
+	data = (decltype(data))((char*)data + (unsigned)(unsigned long long)callbackState);
 	JsConvertValueToBoolean(arguments[1], &number);
 	JsBooleanToBool(number, &argument);
 	*data = argument;
 	JsBoolToBoolean(*data, &number);
 	return number;
+}
+
+JsValueRef GeneratableObject::GenerateObject(bool* worked) {
+	JsCreateExternalObject(DerivedClassPtr, this->Finalizer, &this->jsMe);
+	bool hasBeenWorking = true;
+	for (int i = 0; this->ObjectProperties[i] && i >= 0;) {
+		if (hasBeenWorking) {														//while building properties is successful
+			if (hasBeenWorking = this->ObjectProperties[i]->Build(this->jsMe))i++;	//keep doing it and increase index so next round we do the next one
+			else i--;																//but if it doesn't work, don't worry about it, we don't have to do any shutdown, just dec the index so next round we're demolishing the previous built
+		} else {																	//if it hasn't been working
+			this->ObjectProperties[i--]->Demolish(this->jsMe);						//keep going down the properties list and demolishing them
+		}
+	}
+	if (worked)*worked = hasBeenWorking;
+	return hasBeenWorking?this->jsMe:JS_INVALID_REFERENCE;
 }
