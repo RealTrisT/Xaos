@@ -115,7 +115,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ModuleManaging.cpp" />
     <ClCompile Include="Xaos.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ModuleManaging.h" />
+    <ClInclude Include="Xaos.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
