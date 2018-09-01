@@ -33,7 +33,7 @@ struct IMAGE_NT_HEADERS_OBJREADY : public IMAGE_NT_HEADERS {
 		&fileheader_basicProps[5], &fileheader_basicProps[6], &fileheader_funcProps[0], 0
 	};
 	/*---------------------------------------------------------------FILE_HEADER/--------------------------------------------------------*/
-	/*-------------------------------------------------------------OPTIONAL_HEADER-----------------------------------------------------*/
+	/*-------------------------------------------------------------OPTIONAL_HEADER-------------------------------------------------------*/
 	BasicProperty optheader_basicProps[29] = {
 		{ "Magic", 						BasicProperty::BasicType::BASETYPE_WORD,  offsetof(IMAGE_OPTIONAL_HEADER, Magic) },
 		{ "MajorLinkerVersion", 		BasicProperty::BasicType::BASETYPE_BYTE,  offsetof(IMAGE_OPTIONAL_HEADER, MajorLinkerVersion) },
@@ -117,7 +117,7 @@ struct Module {
 
 struct Module_OBJREADY : public Module, public GeneratableObject {
 	Module_OBJREADY() : GeneratableObject(Module_props, this) {};
-	Module_OBJREADY(Module mod) : Module(mod), GeneratableObject(Module_props, this) { printf("constructor->%s\n", PEH.peh_arre[0]->name); };
+	Module_OBJREADY(Module mod) : Module(mod), GeneratableObject(Module_props, this) {};
 
 	static void* PEH_getter(Module_OBJREADY* daddyData, IMAGE_NT_HEADERS64* medata);
 	static JsValueRef Module_UpdatePEH(JsValueRef c, bool cc, JsValueRef * a, unsigned short ac, void * cs);

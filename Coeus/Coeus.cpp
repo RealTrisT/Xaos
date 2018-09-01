@@ -95,7 +95,7 @@ HMODULE Coeus::LoadModule(char * modName, JsValueRef* ModuleMessage){
 		if (CallJs) {
 			if(ModuleMessage)*ModuleMessage = CallJs();
 			else CallJs();
-		}
+		} else if (ModuleMessage)*ModuleMessage = JS_INVALID_REFERENCE;
 		return loaded;
 	} else {
 		puts("> Could Not Load Module");

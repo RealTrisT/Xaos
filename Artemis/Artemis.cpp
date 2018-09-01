@@ -39,6 +39,7 @@ JsValueRef CALLBACK Artemis_OpenProcess(JsValueRef callee, bool isConstructCall,
 			if (process->Open(nameBuffer)) { return process->GenerateObject();}
 			else { delete process; goto Artemis_OpenProcess_failiure; }
 		} else {
+			delete process;
 			goto Artemis_OpenProcess_failiure;
 		}
 	}
