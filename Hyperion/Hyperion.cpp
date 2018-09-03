@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+#include <dwmapi.h>
+#pragma comment (lib, "Dwmapi.lib")
+
 #define ScrWidth 1920
 #define ScrHeight 1080
 
@@ -31,26 +34,30 @@ bool InitializeHyperion(unsigned char* thismod) {
 	puts("started initing");
 	for (unsigned y = 0; y < ScrHeight; y++) {
 		for (unsigned x = 0; x < ScrWidth; x++) {
-			scr[y][x] = { (float)x, (float)y, 0, {1.f, 0.f, 1.f, .1f} };
+			scr[y][x] = { (float)x, (float)y, 0, { float(x) / float(ScrWidth), float(y) / float(ScrHeight), 0.f, .5f} };
 	}	}
+	
+
+	for (unsigned y = 100; y < ScrHeight-100; y++) {
+		for (unsigned x = 100; x < ScrWidth-100; x++) {
+			scr[y][x] = { 1.f, float(x) / float(ScrWidth), float(y) / float(ScrHeight), 0.2f };
+	}	}
+
 	puts("finished initing screen buffer");
 
 	elUD = new UD(ScrWidth, ScrHeight);
 
-	elUD->SetWindowInitCallback([](UD* elUD) -> void { 
-//		SetWindowLong(elUD->hWnd, GWL_EXSTYLE, GetWindowLong(elUD->hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-		SetLayeredWindowAttributes(elUD->hWnd, RGB(0, 0, 0), 0, LWA_ALPHA);
+	elUD->SetWindowInitCallback([](UD* elUDp) -> void {
+		SetLayeredWindowAttributes(elUD->hWnd, RGB(0, 0, 0), 0xFF, LWA_ALPHA);
+		MARGINS margs = { 0, ScrWidth, 0, ScrHeight };
+		DwmExtendFrameIntoClientArea(elUDp->hWnd, &margs);
+		
 		elUD->InitD3D(); 
 	});
 	elUD->InitWindow(WindowProc);
 
 	puts("finished initing windowshit");
 	
-	/*unsigned i = 1080;
-	while (getchar() != EOF) {
-		screen[i++] = { 1.f, 0.f, 0.f, 1.f };
-		elUD->ShitImage(screen); elUD->PresentFrame();
-	}*/
 
 	elUD->ShitImage(screen); elUD->PresentFrame();
 

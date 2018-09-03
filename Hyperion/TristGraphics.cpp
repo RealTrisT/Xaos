@@ -44,9 +44,9 @@ DWORD UD::windowFunc(UD* _this){
 	}
 
 	RECT desired_size = { 0, 0, (LONG)_this->width, (LONG)_this->height };
-	AdjustWindowRect(&desired_size, WS_VISIBLE | WS_OVERLAPPEDWINDOW, FALSE);
+	AdjustWindowRect(&desired_size, WS_VISIBLE | WS_POPUP, FALSE);
 
-	_this->hWnd = CreateWindowEx(WS_EX_LAYERED | WS_EX_TOPMOST, (LPCSTR)classerino, "GaiBoi", WS_VISIBLE | WS_OVERLAPPEDWINDOW, 0, 0, desired_size.right - desired_size.left, desired_size.bottom - desired_size.top, 0, 0, 0, 0);
+	_this->hWnd = CreateWindowEx(WS_EX_LAYERED | WS_EX_TOPMOST, (LPCSTR)classerino, "GaiBoi", WS_VISIBLE | WS_POPUP, 0, 0, desired_size.right - desired_size.left, desired_size.bottom - desired_size.top, 0, 0, 0, 0);
 	if (!_this->hWnd) {
 		printf("Error creating window %d", GetLastError());
 		return 0;
@@ -360,6 +360,6 @@ const char* UD::shader = R"(
 
 	float4 PShader(float4 position : SV_POSITION, float4 color : COLOR) : SV_TARGET
 	{
-		return float4(color[0], color[1], color[2], color[3]);
+		return float4(color[0]*color[3], color[1]*color[3], color[2]*color[3], color[3]);   //TODO: actually implement alpha bending https://docs.microsoft.com/en-us/windows/desktop/direct3d11/d3d10-graphics-programming-guide-blend-state
 	}
 )";
