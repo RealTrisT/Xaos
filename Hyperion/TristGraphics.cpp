@@ -16,10 +16,11 @@ void UD::InitWindow(LRESULT(CALLBACK *WindowProc_a)(HWND hWnd, UINT message, WPA
 	if (WindowProc_a)this->WindowProc_p = WindowProc_a;
 
 	windowInitedEvent = CreateEventA(NULL, TRUE, FALSE, NULL);	//create the event that we're gonna wait for until the window is done initializing
-
+	puts("creating thread to create window and init dx");
 	this->windowThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)UD::windowFunc, (LPVOID)this, 0, 0);
-
+	puts("thread created");
 	WaitForSingleObject(windowInitedEvent, INFINITE);			//wait for the window to finish initializing and signal the event
+	puts("shit inited");
 	CloseHandle(windowInitedEvent);
 }
 
@@ -45,7 +46,7 @@ DWORD UD::windowFunc(UD* _this){
 	RECT desired_size = { 0, 0, (LONG)_this->width, (LONG)_this->height };
 	AdjustWindowRect(&desired_size, WS_VISIBLE | WS_OVERLAPPEDWINDOW, FALSE);
 
-	_this->hWnd = CreateWindowA((LPCSTR)classerino, "GaiBoi", WS_VISIBLE | WS_OVERLAPPEDWINDOW, 0, 0, desired_size.right - desired_size.left, desired_size.bottom - desired_size.top, 0, 0, 0, 0);
+	_this->hWnd = CreateWindowEx(WS_EX_LAYERED | WS_EX_TOPMOST, (LPCSTR)classerino, "GaiBoi", WS_VISIBLE | WS_OVERLAPPEDWINDOW, 0, 0, desired_size.right - desired_size.left, desired_size.bottom - desired_size.top, 0, 0, 0, 0);
 	if (!_this->hWnd) {
 		printf("Error creating window %d", GetLastError());
 		return 0;
@@ -54,6 +55,7 @@ DWORD UD::windowFunc(UD* _this){
 	_this->windInited = true;
 	_this->callback_initedWindow(_this);
 
+	puts("inited, signaling event");
 	SetEvent(windowInitedEvent);							//signal the event to let the parent thread know we're done with initializing
 
 	MSG msg;
@@ -125,7 +127,7 @@ void UD::InitD3D(){
 		0, 
 		&this->pCon
 	);
-
+	printf("D3D11CreateDeviceAndSwapChain: %s\n", (success == S_OK)?"success":"failed");
 	//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	//----------------------------------------------------------------------------BACK BUFFER-----------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -135,8 +137,10 @@ void UD::InitD3D(){
 	this->pSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
 
 	// use the back buffer address to create the render target
-	this->pDevice->CreateRenderTargetView(pBackBuffer, NULL, &this->backbuffer);
+	success = this->pDevice->CreateRenderTargetView(pBackBuffer, NULL, &this->backbuffer);
 	pBackBuffer->Release();
+
+	printf("CreateRenderTargetView: %s\n", (success == S_OK) ? "success" : "failed");
 
 	// set the render target as the back buffer
 	this->pCon->OMSetRenderTargets(1, &this->backbuffer, NULL);
@@ -179,14 +183,15 @@ void UD::InitD3D(){
 		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
 
-	this->pDevice->CreateInputLayout(ied, 2, VS->GetBufferPointer(), VS->GetBufferSize(), &pLayout);
+	success = this->pDevice->CreateInputLayout(ied, 2, VS->GetBufferPointer(), VS->GetBufferSize(), &pLayout);
+	printf("CreateInputLayout: %s\n", (success == S_OK) ? "success" : "failed");
 	this->pCon->IASetInputLayout(pLayout);
 
 	//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------PROJECTION MATRIX--------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	DirectX::XMMATRIX mat = DirectX::XMMatrixOrthographicOffCenterLH(0, width, height, 0, 0.f, 1.f);
+	DirectX::XMMATRIX mat = DirectX::XMMatrixOrthographicOffCenterLH(0.f, float(width), float(height), 0.f, 0.f, 1.f);
 
 	D3D11_BUFFER_DESC cbDesc;
 	cbDesc.ByteWidth = sizeof(mat);
@@ -306,7 +311,7 @@ void UD::ShitImage(f4color * buffer){
 void UD::ShitImage(PIXEL_VERTEX* pPix) {
 
 	unsigned int size = this->width * this->height;
-
+	printf("size: %ux%u\n", this->width, this->height);
 	D3D11_MAPPED_SUBRESOURCE ms;
 	if (FAILED(pCon->Map(pVertexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) { puts("failed to map"); return; }	// map the buffer
 	memcpy(ms.pData, pPix, size * sizeof(PIXEL_VERTEX));																// copy the data

@@ -1,10 +1,13 @@
 #pragma once
 
+typedef bool(*InitModFnc)(unsigned char*);
+typedef void(*TermModFnc)();
+
 struct __declspec(dllexport) Xaos_ModuleInfo {
 	const char* LoadMessage;
 	const char* ModuleInfo;
 	const char** ModuleDependencies; //ends in 0						///////////////NOT YET USED, MAYBE WHEN MANUAL MAPPING IS IMPLEMENTED (in case user's looking to release a module used by others)
-	bool (*Init)(void* me);
+	bool (*Init)(unsigned char* me);
 	void(*Term)();
 };
 

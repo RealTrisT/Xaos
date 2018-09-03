@@ -1,7 +1,7 @@
 #include "ModuleManaging.h"
 
 Xaos_ModEntry Xaos_ModLinkedListOwn = { 0, 0, 0, GetModuleHandleA(0), (char*)"Xaos.dll" }; 
-extern const Xaos_ModEntry* Xaos_ModLinkedList = &Xaos_ModLinkedListOwn;
+Xaos_ModEntry*const Xaos_ModLinkedList = &Xaos_ModLinkedListOwn;
 
 void Xaos_ModEntry::Free() {
 	if (modInfo && modInfo->Term)modInfo->Term();

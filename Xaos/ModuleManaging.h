@@ -12,4 +12,4 @@ struct Xaos_ModEntry {
 	static Xaos_ModEntry* AllocNew(Xaos_ModEntry* Next, Xaos_ModEntry* Prev, Xaos_ModuleInfo* ModInfo, HMODULE ModBase, char* ModName);
 };
 
-const Xaos_ModEntry* Xaos_ModLinkedList;
+extern Xaos_ModEntry*const Xaos_ModLinkedList;

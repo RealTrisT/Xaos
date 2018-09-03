@@ -5,19 +5,21 @@
 
 
 Xaos_ModuleInfo* Xaos_LoadModule(const char * modName, void** modPtr){
-	unsigned modName_size = strlen(modName);										//make
-	char* modPath = (char*)malloc(8 + modName_size + 1);							//relative
-	memcpy(modPath, "Modules/", 8); memcpy(modPath + 8, modName, modName_size+1);	//path
 
-	HMODULE loadedMod = 0;															//try and
-	if (!(loadedMod = LoadLibraryA(modPath))) {free(modPath);return false;}			//load it
+	unsigned modNameLen = strlen(modName);
+	char* modPath = (char*)malloc(8 + modNameLen + 1);
+	memcpy(modPath, (char*)"Modules\\", 8); memcpy(modPath + 8, modName, modNameLen + 1);
 
-	free(modPath);																	//no longer need relative path
+	HMODULE loadedMod = 0;											//try and
+	if (!(loadedMod = LoadLibraryA(modPath))) { printf("Failed to load %s:%p:0x%X\n", modName, loadedMod, GetLastError()); free(modPath); return 0; }				//load it
 
-	Xaos_ModuleInfo* modInfo = 0;																							//try and
-	if (!(modInfo = (Xaos_ModuleInfo*)GetProcAddress(loadedMod, "ModuleInfo"))) { FreeLibrary(loadedMod); return false; }	//get modInfo struct
+	free(modPath);
 
-	Xaos_ModEntry* llc = const_cast<Xaos_ModEntry*>(Xaos_ModLinkedList);										//linked list cursor
+	Xaos_ModuleInfo* modInfo = 0;																						//try and
+	if (!(modInfo = (Xaos_ModuleInfo*)GetProcAddress(loadedMod, "ModuleInfo"))) { FreeLibrary(loadedMod); return 0; }	//get modInfo struct
+	puts("found module info");
+
+	Xaos_ModEntry* llc = const_cast<Xaos_ModEntry*>(Xaos_ModLinkedList);			//linked list cursor
 	for (; llc->next; llc = llc->next);												//get last element
 
 	//doubly linked list where the first element points to the last, but the last points to zero
@@ -26,7 +28,7 @@ Xaos_ModuleInfo* Xaos_LoadModule(const char * modName, void** modPtr){
 	llc->next = loadedModXaosEntry;													//adjust previos entry's next
 	Xaos_ModLinkedList->prev = loadedModXaosEntry;									//adjust first entry's prev
 
-	if(modInfo->Init)modInfo->Init(loadedMod);										//run initialization proc
+	if(modInfo->Init)modInfo->Init((unsigned char*)loadedMod);						//run initialization proc			TODO: check return type and act accordingly
 
 	if (modPtr)*modPtr = loadedMod;
 	return modInfo;																	//return the infoz
@@ -48,47 +50,44 @@ bool Xaos_UnloadModule(const char * modName) {
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------NOT TEST REALM----------------------------------------------------------------------------
+//------------------------------------------------------------------------- TEST REALM ---------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #include <iostream>
 #include "../Coeus/Coeus.h"
+#include "../ChakraCore/ChakraCore.h"
 #pragma comment(lib, "../libs/ChakraCore64.lib")
 
 int main() {
 	SetConsoleTitle("Xaos");
+	/*//															COEUS_TEST
+	HMODULE Coeus_Dll = 0;
+	Xaos_ModuleInfo* Coeus_DllInfo = Xaos_LoadModule("Coeus.dll", (void**)&Coeus_Dll);
+	if (Coeus_DllInfo) {
 
-	HMODULE Coeus_Dll = LoadLibrary("Modules/Coeus.dll");
-	if (Coeus_Dll) {
-		JsValueRef Coeus_Return = 0;
-
-		std::wstring(*Coeus_whateverToStringJs)(JsValueRef) = (std::wstring(*)(JsValueRef))GetProcAddress(Coeus_Dll, "Coeus_whateverToStringJs");
-		JsErrorCode(*Coeus_RunJs)(wchar_t*, JsValueRef*) = (JsErrorCode(*)(wchar_t*, JsValueRef*))GetProcAddress(Coeus_Dll, "Coeus_RunJs");
+		bool(*Coeus_RunJs)(wchar_t*, std::wstring*) = (bool(*)(wchar_t*, std::wstring*))GetProcAddress(Coeus_Dll, "Coeus_RunJs");
 		void(*Coeus_CollectGarbageJs)() = (void(*)())GetProcAddress(Coeus_Dll, "Coeus_CollectGarbageJs");
-
-		((void(*)(HMODULE))GetProcAddress(Coeus_Dll, "Initialize"))(Coeus_Dll);
-		Coeus_Return = ((JsValueRef(*)())GetProcAddress(Coeus_Dll, "InitializeJs"))();
-
-		printf(": %S\n", Coeus_whateverToStringJs(Coeus_Return).c_str());
-
-		/*---------------------test-------------------------*/
-		//JsValueRef globle; JsGetGlobalObject(&globle);
-		//PEH.Build(globle);
-		/*---------------------test-------------------------*/
-
-		std::wstring resultW; std::wstring script; JsValueRef returnValue;
+		
+		std::wstring resultW; std::wstring script;
 		do {
 			Coeus_CollectGarbageJs();
-			resultW = L"";
+			resultW = L"FAILED TO RUN";
 			printf(">>"); std::getline(std::wcin, script);
-			Coeus_RunJs((wchar_t*)script.c_str(), &returnValue);
-			printf(": %S\n", (resultW = Coeus_whateverToStringJs(returnValue)).c_str());
+			Coeus_RunJs((wchar_t*)script.c_str(), &resultW);
+			printf(": %S\n", resultW.c_str());
 		} while (wcscmp(resultW.c_str(), L"exit"));
 
-		((void(*)())GetProcAddress(Coeus_Dll, "Terminate"))();
-	}
-	else { puts("coeus not loaded"); }
+		Xaos_UnloadModule("Coeus.dll");
+		puts("Coeus Unloaded");
+	} else { printf("coeus not loaded\n"); }*/
 
-	system("pause");
+	//																HYPERION_TEST
+	HMODULE Hyperion_Dll = 0;
+	Xaos_ModuleInfo* Hyperion_DllInfo = Xaos_LoadModule("Hyperion.dll", (void**)&Hyperion_Dll);
+	if (!Hyperion_DllInfo)printf("fack\n");
+
+
+	//system("pause");
+	getchar();
 	return 0;
 }
