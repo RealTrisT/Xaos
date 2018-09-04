@@ -3,49 +3,16 @@
 #include "Xaos.h"
 #include "ModuleManaging.h"
 
-
-Xaos_ModuleInfo* Xaos_LoadModule(const char * modName, void** modPtr){
-
-	unsigned modNameLen = strlen(modName);
-	char* modPath = (char*)malloc(8 + modNameLen + 1);
-	memcpy(modPath, (char*)"Modules\\", 8); memcpy(modPath + 8, modName, modNameLen + 1);
-
-	HMODULE loadedMod = 0;											//try and
-	if (!(loadedMod = LoadLibraryA(modPath))) { printf("Failed to load %s:%p:0x%X\n", modName, loadedMod, GetLastError()); free(modPath); return 0; }				//load it
-
-	free(modPath);
-
-	Xaos_ModuleInfo* modInfo = 0;																						//try and
-	if (!(modInfo = (Xaos_ModuleInfo*)GetProcAddress(loadedMod, "ModuleInfo"))) { FreeLibrary(loadedMod); return 0; }	//get modInfo struct
-	puts("found module info");
-
-	Xaos_ModEntry* llc = const_cast<Xaos_ModEntry*>(Xaos_ModLinkedList);			//linked list cursor
-	for (; llc->next; llc = llc->next);												//get last element
-
-	//doubly linked list where the first element points to the last, but the last points to zero
-	Xaos_ModEntry* loadedModXaosEntry = Xaos_ModEntry::AllocNew(0, llc, modInfo, loadedMod, _strdup(modName));
-
-	llc->next = loadedModXaosEntry;													//adjust previos entry's next
-	Xaos_ModLinkedList->prev = loadedModXaosEntry;									//adjust first entry's prev
-
-	if(modInfo->Init)modInfo->Init((unsigned char*)loadedMod);						//run initialization proc			TODO: check return type and act accordingly
-
-	if (modPtr)*modPtr = loadedMod;
-	return modInfo;																	//return the infoz
+Xaos_ModuleInfo * Xaos_LoadModule(const char * mod, void ** ptr) {
+	return LoadModule(mod, ptr);
 }
 
-bool Xaos_UnloadModule(const char * modName) {
-	Xaos_ModEntry* llc = Xaos_ModLinkedList;											//linked list cursor
-	bool found = false;
-	for (; llc->next && !(found = !strcmp(modName, llc->modName)); llc = llc->next);	//find correct one
-	if (!found)return false;
-	if (!strcmp(Xaos_ModLinkedList->modName, llc->modName))return false;				//this asshole is trying to free xaos
-	HMODULE lib = llc->modBase;															//save lib base cuz we plan on releasing the object
-	llc->prev->next = llc->next;														//adjust linked list previos element's next
-	if (llc->next) llc->next->prev = llc->prev;											//adjust linked list next element's prev
-	llc->Free();																		//release linked list object (this pointer will no longer point to anything)
-	FreeLibrary(lib);																	//free da boi
-	return true;
+bool Xaos_UnloadModule(const char * mod) {
+	return UnloadModule(mod);
+}
+
+void Xaos_Shutdown() {
+	ShutdownAllModules();
 }
 
 
@@ -55,6 +22,7 @@ bool Xaos_UnloadModule(const char * modName) {
 
 #include <iostream>
 #include "../Coeus/Coeus.h"
+#include "../Hyperion/Hyperion.h"
 #include "../ChakraCore/ChakraCore.h"
 #pragma comment(lib, "../libs/ChakraCore64.lib")
 
@@ -67,7 +35,7 @@ int main() {
 
 		bool(*Coeus_RunJs)(wchar_t*, std::wstring*) = (bool(*)(wchar_t*, std::wstring*))GetProcAddress(Coeus_Dll, "Coeus_RunJs");
 		void(*Coeus_CollectGarbageJs)() = (void(*)())GetProcAddress(Coeus_Dll, "Coeus_CollectGarbageJs");
-		
+
 		std::wstring resultW; std::wstring script;
 		do {
 			Coeus_CollectGarbageJs();
@@ -86,8 +54,29 @@ int main() {
 	Xaos_ModuleInfo* Hyperion_DllInfo = Xaos_LoadModule("Hyperion.dll", (void**)&Hyperion_Dll);
 	if (!Hyperion_DllInfo)printf("fack\n");
 
+	auto Hyp_GetScreenDimensions = (decltype(Hyperion_GetScreenDimensions)*)GetProcAddress(Hyperion_Dll, "Hyperion_GetScreenDimensions");
+	auto Hyp_UpdateScreen = (decltype(Hyperion_UpdateScreen)*)GetProcAddress(Hyperion_Dll, "Hyperion_UpdateScreen");
+	auto HypScreen = *(decltype(HyperionScreen)*)GetProcAddress(Hyperion_Dll, "HyperionScreen");
+
+	unsigned scrDim[2] = { 0 };
+	Hyp_GetScreenDimensions(scrDim);
+
+	for (size_t x = 0; x < scrDim[0]; x++) {
+		for (size_t y = 0; y < scrDim[1]; y++) {
+			HypScreen[y*scrDim[0] + x].r = (unsigned char)(x / float(scrDim[0]) * 255);
+			HypScreen[y*scrDim[0] + x].g = (unsigned char)(y / float(scrDim[1]) * 255);
+			HypScreen[y*scrDim[0] + x].b = 0;
+			HypScreen[y*scrDim[0] + x].a = 128;
+		}
+	}
+	Hyp_UpdateScreen();
+
+
 
 	//system("pause");
 	getchar();
+	Xaos_Shutdown();
+	getchar();
 	return 0;
 }
+

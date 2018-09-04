@@ -2,6 +2,8 @@
 
 
 #include <stdio.h>
+#include <chrono>
+#include <thread>
 
 
 #include <DirectXMath.h>
@@ -66,6 +68,7 @@ DWORD UD::windowFunc(UD* _this){
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));		//TODO: 2 headers for this?
 	}
 
 	return 0;
@@ -311,7 +314,6 @@ void UD::ShitImage(f4color * buffer){
 void UD::ShitImage(PIXEL_VERTEX* pPix) {
 
 	unsigned int size = this->width * this->height;
-	printf("size: %ux%u\n", this->width, this->height);
 	D3D11_MAPPED_SUBRESOURCE ms;
 	if (FAILED(pCon->Map(pVertexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) { puts("failed to map"); return; }	// map the buffer
 	memcpy(ms.pData, pPix, size * sizeof(PIXEL_VERTEX));																// copy the data
@@ -360,6 +362,6 @@ const char* UD::shader = R"(
 
 	float4 PShader(float4 position : SV_POSITION, float4 color : COLOR) : SV_TARGET
 	{
-		return float4(color[0]*color[3], color[1]*color[3], color[2]*color[3], color[3]);   //TODO: actually implement alpha bending https://docs.microsoft.com/en-us/windows/desktop/direct3d11/d3d10-graphics-programming-guide-blend-state
+		return float4(color[0]*color[3], color[1]*color[3], color[2]*color[3], color[3]);   //TODO: actually implement alpha blending https://docs.microsoft.com/en-us/windows/desktop/direct3d11/d3d10-graphics-programming-guide-blend-state
 	}
 )";

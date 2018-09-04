@@ -13,3 +13,4 @@ struct __declspec(dllexport) Xaos_ModuleInfo {
 
 __declspec(dllexport) Xaos_ModuleInfo* Xaos_LoadModule(const char* mod, void** ptr = 0);
 __declspec(dllexport) bool Xaos_UnloadModule(const char* mod);
+__declspec(dllexport) void Xaos_Shutdown();

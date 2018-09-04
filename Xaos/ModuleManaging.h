@@ -2,14 +2,19 @@
 #include "Xaos.h"
 #include <Windows.h>
 
-struct Xaos_ModEntry {
-	Xaos_ModEntry* next;
-	Xaos_ModEntry* prev;
+struct ModEntry {
+	ModEntry* next;
+	ModEntry* prev;
 	Xaos_ModuleInfo* modInfo;
 	HMODULE modBase;
 	char* modName;
 	void Free();
-	static Xaos_ModEntry* AllocNew(Xaos_ModEntry* Next, Xaos_ModEntry* Prev, Xaos_ModuleInfo* ModInfo, HMODULE ModBase, char* ModName);
+	static ModEntry* AllocNew(ModEntry* Next, ModEntry* Prev, Xaos_ModuleInfo* ModInfo, HMODULE ModBase, char* ModName);
 };
 
-extern Xaos_ModEntry*const Xaos_ModLinkedList;
+extern ModEntry*const ModLinkedList;
+
+Xaos_ModuleInfo* LoadModule(const char * modName, void** modPtr);
+bool UnloadModule(ModEntry * mod);
+bool UnloadModule(const char * modName);
+void ShutdownAllModules();

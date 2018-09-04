@@ -17,6 +17,17 @@ struct b3color {
 	operator unsigned char*() { return (unsigned char*)this; }
 	unsigned char r, g, b;
 };
+struct b4color {
+	b4color() {}
+	b4color(unsigned char R, unsigned char G, unsigned char B, unsigned char A) : r(R), g(G), b(B), a(A) {}
+	b4color(unsigned char* C) : rgba(*(unsigned*)C){}
+	operator unsigned char*() { return (unsigned char*)this; }
+	b4color& operator=(unsigned char* C) { rgba = *(unsigned*)C; return *this; }
+	union {
+		struct { unsigned char r, g, b, a; };
+		unsigned int rgba;
+	};
+};
 struct f3color {
 	f3color() {}
 	f3color(float R, float G, float B) : r(R), g(G), b(B) {}
@@ -29,6 +40,8 @@ struct f4color {
 	f4color() {}
 	f4color(float R, float G, float B, float A) : r(R), g(G), b(B), a(A) {}
 	f4color(f3color C, float alpha) : r(C.r), g(C.g), b(C.b), a(alpha) {}
+	f4color(b4color C) : r(float(C.r) / 255), g(float(C.g) / 255), b(float(C.b) / 255), a(float(C.a) / 255) {}
+	f4color& operator=(b4color C) { return (*this = f4color(C)); }
 	operator float*() { return (float*)this; }
 	float r, g, b, a;
 };
